@@ -10,9 +10,9 @@ import { handleCheckStatus, handleCheckIp } from './check';
 import { handleWebSocket } from './ws';
 
 export interface Env {
-	WORKERSSH_KV: KVNamespace;
-	ENVIRONMENT: string;
-	ASSETS: { fetch: (request: Request) => Promise<Response> };
+	WORKERSSH_KV?: KVNamespace;
+	ENVIRONMENT?: string;
+	ASSETS?: { fetch: (request: Request) => Promise<Response> };
 }
 
 const router = Router();
@@ -41,21 +41,32 @@ function errorResponse(error: string, status = 500): Response {
 router.options('*', () => new Response(null, { headers: corsHeaders }));
 
 // Auth routes
-router.get('/api/auth/check', (request, env, ctx) => handleAuth(request, env, ctx));
-router.post('/api/auth/check-password', (request, env, ctx) => handleCheckPassword(request, env, ctx));
-router.post('/api/auth/set-password', (request, env, ctx) => handleSetPassword(request, env, ctx));
+router.get('/api/auth/check', (request: any, env: Env, ...args: any[]) =>
+	handleAuth(request, env).catch(e => jsonResponse({ hasPassword: false, error: String(e) })));
+router.post('/api/auth/check-password', (request: any, env: Env, ...args: any[]) =>
+	handleCheckPassword(request, env).catch(e => jsonResponse({ success: false, error: String(e) }, 500)));
+router.post('/api/auth/set-password', (request: any, env: Env, ...args: any[]) =>
+	handleSetPassword(request, env).catch(e => jsonResponse({ success: false, error: String(e) }, 500)));
 
 // Connection CRUD routes
-router.get('/api/connections', (request, env, ctx) => handleListConnections(request, env, ctx));
-router.post('/api/connections', (request, env, ctx) => handleCreateConnection(request, env, ctx));
-router.get('/api/connections/:id', (request, env, ctx) => handleGetConnection(request, env, ctx));
-router.put('/api/connections/:id', (request, env, ctx) => handleUpdateConnection(request, env, ctx));
-router.patch('/api/connections/:id/rename', (request, env, ctx) => handleRenameConnection(request, env, ctx));
-router.delete('/api/connections/:id', (request, env, ctx) => handleDeleteConnection(request, env, ctx));
+router.get('/api/connections', (request: any, env: Env, ...args: any[]) =>
+	handleListConnections(request, env).catch(e => errorResponse(String(e))));
+router.post('/api/connections', (request: any, env: Env, ...args: any[]) =>
+	handleCreateConnection(request, env).catch(e => errorResponse(String(e))));
+router.get('/api/connections/:id', (request: any, env: Env, ...args: any[]) =>
+	handleGetConnection(request, env).catch(e => errorResponse(String(e))));
+router.put('/api/connections/:id', (request: any, env: Env, ...args: any[]) =>
+	handleUpdateConnection(request, env).catch(e => errorResponse(String(e))));
+router.patch('/api/connections/:id/rename', (request: any, env: Env, ...args: any[]) =>
+	handleRenameConnection(request, env).catch(e => errorResponse(String(e))));
+router.delete('/api/connections/:id', (request: any, env: Env, ...args: any[]) =>
+	handleDeleteConnection(request, env).catch(e => errorResponse(String(e))));
 
 // Status & IP check routes
-router.get('/api/check/:id', (request, env, ctx) => handleCheckStatus(request, env, ctx));
-router.post('/api/check-ip', (request, env, ctx) => handleCheckIp(request, env, ctx));
+router.get('/api/check/:id', (request: any, env: Env, ...args: any[]) =>
+	handleCheckStatus(request, env).catch(e => errorResponse(String(e))));
+router.post('/api/check-ip', (request: any, env: Env, ...args: any[]) =>
+	handleCheckIp(request, env).catch(e => errorResponse(String(e))));
 
 // WebSocket route
 router.get('/ws', handleWebSocket);
@@ -65,7 +76,6 @@ router.all('*', async (request: Request, env: Env) => {
 	const url = new URL(request.url);
 	const path = url.pathname;
 
-	// If it's an API route that wasn't matched, return 404
 	if (path.startsWith('/api/')) {
 		return errorResponse('Not Found', 404);
 	}
@@ -75,8 +85,8 @@ router.all('*', async (request: Request, env: Env) => {
 		if (env.ASSETS) {
 			return await env.ASSETS.fetch(request);
 		}
-	} catch (err) {
-		// Fall through to 404
+	} catch {
+		// Fall through
 	}
 
 	// Try to serve index.html for SPA routes
@@ -85,7 +95,7 @@ router.all('*', async (request: Request, env: Env) => {
 			const indexRequest = new Request(new URL('/index.html', url).toString(), request);
 			return await env.ASSETS.fetch(indexRequest);
 		}
-	} catch (err) {
+	} catch {
 		// Return 404
 	}
 
@@ -102,9 +112,9 @@ export default {
 			return new Response('Not Found', { status: 404, headers: corsHeaders });
 		} catch (err: any) {
 			console.error('Unhandled error:', err);
-			return new Response(err.message || 'Internal Server Error', {
+			return new Response(JSON.stringify({ success: false, error: String(err?.message || err || 'Internal Server Error') }), {
 				status: 500,
-				headers: corsHeaders,
+				headers: { 'Content-Type': 'application/json', ...corsHeaders },
 			});
 		}
 	},
