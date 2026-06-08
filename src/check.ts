@@ -11,7 +11,7 @@ async function getIpInfo(env: any, ip: string): Promise<any> {
 	try {
 		// Using ip-api.com free API
 		const response = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,countryCode,region,city,isp,query`);
-		const data = await response.json();
+		const data: any = await response.json();
 		
 		if (data.status === 'success') {
 			// Cache for 24 hours

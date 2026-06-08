@@ -64,7 +64,7 @@ export async function handleAuth(request: IRequest, env: any, ctx: any): Promise
 
 export async function handleCheckPassword(request: IRequest, env: any, ctx: any): Promise<Response> {
 	try {
-		const { password } = await request.json();
+		const { password } = await request.json() as { password?: string };
 		if (!password) {
 			return new Response(JSON.stringify({ success: false, error: 'Password required' }), {
 				status: 400,
@@ -106,7 +106,7 @@ export async function handleCheckPassword(request: IRequest, env: any, ctx: any)
 
 export async function handleSetPassword(request: IRequest, env: any, ctx: any): Promise<Response> {
 	try {
-		const { password } = await request.json();
+		const { password } = await request.json() as { password?: string };
 		if (!password) {
 			return new Response(JSON.stringify({ success: false, error: 'Password required' }), {
 				status: 400,
