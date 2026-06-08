@@ -3,13 +3,13 @@ name = "workersssh"
 main = "src/index.ts"
 compatibility_date = "2026-06-08"
 
-# 取消注释下方配置即可绑定自定义域名
+# 绑定自定义域名（可选）
 # [route]
 # pattern = "ssh.example.com"
 # zone_name = "example.com"
 
-# KV Namespace - 用于存储密码和 SSH 连接配置
-# Cloudflare Dashboard 部署时会自动提示创建或绑定
+# KV 存储 - 用于保存密码和 SSH 连接配置
+# GitHub Actions 部署时会自动创建并填充 ID
 [[kv_namespaces]]
 binding = "WORKERSSH_KV"
 id = ""
