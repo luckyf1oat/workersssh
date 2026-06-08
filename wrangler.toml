@@ -1,0 +1,13 @@
+name = "workersssh"
+main = "src/index.ts"
+compatibility_date = "2025-02-04"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+ENVIRONMENT = "production"
+
+# KV Namespace - Uncomment and set ID after creating:
+# npx wrangler kv namespace create WORKERSSH_KV
+# [[kv_namespaces]]
+# binding = "WORKERSSH_KV"
+# id = "your-kv-id-here"
