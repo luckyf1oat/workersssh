@@ -4,8 +4,6 @@
 
 基于 [luckyf1oat/workersssh](https://github.com/luckyf1oat/workersssh) 开发
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/luckyf1oat/workersssh)
-
 ## ✨ 功能特性
 
 - 🔐 **密码认证** - 首次使用设置密码，后续登录验证，保护你的 SSH 连接安全
@@ -17,18 +15,41 @@
 - ⚡ **快捷命令** - 预置 12 个常用 Linux 命令，一键发送到终端
 - 🔄 **自动重连** - 连接断开后按 R 键快速重连
 
-## 🚀 一键部署
+## 🚀 部署指南
 
-### 方式一：Deploy to Cloudflare 按钮
+提供了两种部署方式，任选其一即可。
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/luckyf1oat/workersssh)
+### 方式一：Cloudflare Dashboard 一键部署（推荐）
 
-点击上方按钮，Cloudflare 将自动：
-1. Fork 仓库到你的 GitHub
-2. 创建 KV Namespace 并自动绑定
-3. 部署 Worker
+通过 Cloudflare Dashboard 连接 GitHub 仓库即可自动部署，KV 命名空间会自动创建并绑定。
 
-### 方式二：手动部署
+1. **Fork 本仓库** 到你的 GitHub 账号
+
+2. **登录 Cloudflare Dashboard**
+   - 进入 **Workers & Pages** → **创建应用程序** → **Pages** → **连接到 Git**
+   - 授权 Cloudflare 访问你的 GitHub 仓库
+   - 选择你 fork 的 `workersssh` 仓库
+
+3. **配置构建设置**（保持默认即可）
+   | 配置项 | 值 |
+   |---|---|
+   | 框架预设 | 无 |
+   | 构建命令 | `npm install && npm run deploy` |
+   | 构建输出目录 | `public` |
+   | 根目录 | `/` |
+
+   > ⚠️ 重要：构建命令使用 `npm run deploy`，它会自动创建并绑定 KV Namespace `workersssh-kv`
+
+4. **部署后 KV 自动绑定**
+   - Cloudflare Dashboard 会自动检测 `wrangler.toml` 中的 `kv_namespaces` 声明
+   - 系统会提示你创建并绑定新的 KV Namespace
+   - 创建后 KV 会自动与 Worker 绑定，无需手动配置
+
+5. **部署完成**
+   - 部署成功后，访问 Cloudflare 分配的 `.workers.dev` 域名
+   - 首次使用需设置密码
+
+### 方式二：本地 CLI 部署
 
 ```bash
 # 1. 克隆仓库

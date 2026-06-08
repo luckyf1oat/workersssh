@@ -1,10 +1,15 @@
+$schema = "./node_modules/wrangler/config-schema.json"
 name = "workersssh"
 main = "src/index.ts"
-compatibility_date = "2025-02-04"
-compatibility_flags = ["nodejs_compat"]
+compatibility_date = "2026-06-08"
 
-# KV Namespace - Auto-created by Deploy to Cloudflare button
-# If deploying manually, run `npm run deploy` to auto-create
+# 取消注释下方配置即可绑定自定义域名
+# [route]
+# pattern = "ssh.example.com"
+# zone_name = "example.com"
+
+# KV Namespace - 用于存储密码和 SSH 连接配置
+# Cloudflare Dashboard 部署时会自动提示创建或绑定
 [[kv_namespaces]]
 binding = "WORKERSSH_KV"
 id = ""
