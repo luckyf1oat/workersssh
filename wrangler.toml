@@ -13,8 +13,7 @@ assets = { directory = "public", binding = "ASSETS" }
 # KV 存储 - 用于保存密码和 SSH 连接配置
 [[kv_namespaces]]
 binding = "WORKERSSH_KV"
-id = ""
-preview_id = ""
-
+id = "8ad346330c214329a3ff0348de6dfd5d"
+preview_id = "8ad346330c214329a3ff0348de6dfd5d"
 [vars]
 ENVIRONMENT = "production"
