@@ -1,4 +1,3 @@
-$schema = "./node_modules/wrangler/config-schema.json"
 name = "workersssh"
 main = "src/index.ts"
 compatibility_date = "2026-06-08"
