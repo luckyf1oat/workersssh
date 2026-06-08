@@ -7,6 +7,9 @@
     "dev": "wrangler dev --assets public --remote",
     "deploy": "node scripts/deploy.js"
   },
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "dependencies": {
     "itty-router": "^5.0.18"
   },

@@ -49,6 +49,8 @@
 
 ### 方式二：本地 CLI 部署
 
+> **要求**: Node.js >= 22 (wrangler v4 需要)
+
 ```bash
 # 1. 克隆仓库
 git clone https://github.com/luckyf1oat/workersssh.git
