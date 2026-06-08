@@ -1,105 +1,127 @@
 /**
  * WorkersSSH Deploy Script
  *
- * 工作流程:
- *   1. 检查 Node.js 版本 (wrangler 需要 >= 22)
- *   2. 检查 wrangler.toml 中 KV ID 是否已配置
- *   3. 如未配置，自动创建 KV Namespace 并写入 wrangler.toml
- *   4. 部署 Worker 到 Cloudflare
- *
- * 注意: wrangler v4 需要 Node.js >= 22
- *       GitHub Actions 请使用 .github/workflows/deploy.yml
+ * 坑: wrangler kv namespace create 会先校验 wrangler.toml，
+ *     如果 kv_namespaces.id = "" 会导致校验失败。
+ *     所以创建 KV 时必须先清掉 id 字段，创建完再写回去。
  */
 
 const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-const MIN_NODE_MAJOR = 22;
 const WRANGLER_TOML = path.join(__dirname, '..', 'wrangler.toml');
 const KV_NAMESPACE = 'workersssh-kv';
 
-// 检查 Node.js 版本
+// 检查 Node 版本
 const nodeMajor = parseInt(process.version.slice(1).split('.')[0], 10);
-if (nodeMajor < MIN_NODE_MAJOR) {
-  console.error(`❌ wrangler v4 需要 Node.js v${MIN_NODE_MAJOR}+`);
-  console.error(`   当前版本: ${process.version}`);
-  console.error('');
-  console.error('   请升级 Node.js:');
-  console.error('   - Windows:  https://nodejs.org/download/');
-  console.error('   - macOS:    brew install node@22');
-  console.error('   - Linux:    https://github.com/nvm-sh/nvm#installing-and-updating');
+if (nodeMajor < 22) {
+  console.error(`❌ wrangler v4 需要 Node.js v22+，当前: ${process.version}`);
   process.exit(1);
 }
 
 function exec(cmd, opts = {}) {
-  const defaultOpts = { encoding: 'utf8', stdio: 'pipe' };
-  return execSync(cmd, { ...defaultOpts, ...opts });
+  return execSync(cmd, { encoding: 'utf8', stdio: 'pipe', ...opts });
 }
 
-function readKvId() {
-  const content = fs.readFileSync(WRANGLER_TOML, 'utf8');
-  const match = content.match(/^id\s*=\s*"([^"]*)"$/m);
-  return match ? match[1] : '';
+function readToml() {
+  return fs.readFileSync(WRANGLER_TOML, 'utf8');
 }
 
-function writeKvId(kvId) {
-  let content = fs.readFileSync(WRANGLER_TOML, 'utf8');
-  content = content.replace(/^id\s*=\s*""/m, `id = "${kvId}"`);
-  content = content.replace(/^preview_id\s*=\s*""/m, `preview_id = "${kvId}"`);
+function writeToml(content) {
   fs.writeFileSync(WRANGLER_TOML, content, 'utf8');
 }
 
-function parseKvOutput(output) {
+/**
+ * 临时清掉 kv_namespaces 的 id / preview_id（创建 KV 时 wrangler 会校验）
+ * 返回原始内容用于恢复
+ */
+function stripKvIds(content) {
+  return content
+    .replace(/^id\s*=\s*""\s*$/m, '# id = ""')
+    .replace(/^preview_id\s*=\s*""\s*$/m, '# preview_id = ""');
+}
+
+/**
+ * 把 id / preview_id 设回真实值
+ */
+function setKvIds(content, id) {
+  return content
+    .replace(/^#\s*id\s*=\s*""\s*$/m, `id = "${id}"`)
+    .replace(/^#\s*preview_id\s*=\s*""\s*$/m, `preview_id = "${id}"`);
+}
+
+/**
+ * 从 wrangler output 中提取 KV ID
+ */
+function extractKvId(output) {
+  // wrangler 3+ JSON: { "success": true, "result": { "id": "xxx" } }
   try {
-    const json = JSON.parse(output);
-    if (json.success && json.result?.id) return json.result.id;
-    if (json.id) return json.id;
-  } catch { /* not JSON */ }
-  const match = output.match(/id["']?\s*[:=]\s*["']?([a-f0-9-]+)["']?/i);
-  return match ? match[1] : '';
+    const j = JSON.parse(output);
+    if (j.success && j.result?.id) return j.result.id;
+    if (j.id) return j.id;
+  } catch {}
+  // wrangler 2 text: id: xxx
+  const m = output.match(/id["']?\s*[:=]\s*["']?([a-f0-9-]+)["']?/i);
+  return m ? m[1] : '';
 }
 
 function main() {
   console.log('🚀 WorkersSSH Deploy\n');
 
-  const existing = readKvId();
-  let kvId = '';
+  // 1. 检查 wrangler.toml
+  let toml = readToml();
+  const existingId = (toml.match(/^id\s*=\s*"([^"]+)"$/m) || [])[1];
 
-  if (existing) {
-    console.log(`📦 使用已有 KV Namespace: ${existing}\n`);
-    kvId = existing;
+  if (existingId) {
+    // KV 已创建过，直接部署
+    console.log(`📦 KV Namespace: ${existingId} (已存在)\n`);
   } else {
-    console.log(`📦 创建 KV Namespace "${KV_NAMESPACE}"...`);
+    // 2. 创建 KV — 先清空 id 避免 wrangler 报错
+    console.log(`📦 创建 KV Namespace "${KV_NAMESPACE}" ...`);
+
+    // 临时注释掉空的 id / preview_id
+    const clean = stripKvIds(toml);
+    writeToml(clean);
+
     try {
       const output = exec(`npx wrangler kv namespace create "${KV_NAMESPACE}"`);
-      kvId = parseKvOutput(output);
-      if (!kvId) {
-        console.error('   ❌ 无法解析 KV ID，输出:');
+      const id = extractKvId(output);
+
+      if (!id) {
+        console.error('❌ 无法从 wrangler 输出中提取 KV ID:');
         console.error(output);
+        // 恢复 toml
+        writeToml(toml);
         process.exit(1);
       }
-      console.log(`   ✅ 创建成功: ${kvId}`);
-      writeKvId(kvId);
-      console.log('   ✅ 已写入 wrangler.toml\n');
+
+      // 写回真实 ID
+      toml = setKvIds(readToml(), id);
+      writeToml(toml);
+      console.log(`   ✅ 创建成功，ID: ${id}\n`);
     } catch (err) {
-      console.error(`   ❌ 创建失败: ${err.message}\n`);
-      console.error('   请手动创建 KV Namespace 并将 ID 填入 wrangler.toml');
-      console.error('   或使用 GitHub Actions 自动部署');
+      // 恢复 toml
+      writeToml(toml);
+      console.error(`❌ 创建 KV 失败: ${err.message}`);
+      console.error('\n请手动操作：');
+      console.error('  1. 在 Cloudflare Dashboard 手动创建 KV Namespace');
+      console.error(`  2. 将 ID 填入 wrangler.toml 的 kv_namespaces.id`);
       process.exit(1);
     }
   }
 
-  console.log('☁️  部署中...\n');
+  // 3. 部署
+  console.log('☁️  部署到 Cloudflare Workers ...\n');
   try {
     exec('npx wrangler deploy --assets public', { stdio: 'inherit' });
     console.log('\n✅ 部署成功！');
   } catch (err) {
     console.error(`\n❌ 部署失败: ${err.message}`);
-    console.error('\n可能的原因:');
+    console.error('\n可能原因：');
     console.error('  · 未登录: npx wrangler login');
-    console.error('  · GitHub Actions: 请设置 CLOUDFLARE_API_TOKEN');
-    console.error('  · Workers Paid 计划: 出站 TCP 需要付费计划');
+    console.error('  · GitHub Actions: 未设置 CLOUDFLARE_API_TOKEN');
+    console.error('  · Workers Paid 计划: 出站 TCP 需要付费');
     process.exit(1);
   }
 }
