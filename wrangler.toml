@@ -11,8 +11,7 @@ compatibility_date = "2026-06-08"
 # GitHub Actions 部署时会自动创建并填充 ID
 [[kv_namespaces]]
 binding = "WORKERSSH_KV"
-id = ""
-preview_id = ""
-
+id = "8ad346330c214329a3ff0348de6dfd5d"
+preview_id = "8ad346330c214329a3ff0348de6dfd5d"
 [vars]
 ENVIRONMENT = "production"
