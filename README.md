@@ -2,7 +2,9 @@
 
 > 基于 Cloudflare Workers 的纯浏览器端 SSH 管理工具 - 无需任何后端服务器
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/YOUR_USERNAME/workersssh)
+基于 [luckyf1oat/workersssh](https://github.com/luckyf1oat/workersssh) 开发
+
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/luckyf1oat/workersssh)
 
 ## ✨ 功能特性
 
@@ -12,41 +14,44 @@
 - 🚩 **IP 地理定位** - 自动检测服务器 IP 归属地，显示对应国家的国旗 emoji
 - 🖥️ **Web 终端** - 基于 xterm.js 的完整终端体验，支持 ANSI 颜色
 - 📋 **选中自动复制** - 鼠标选中文本自动复制到剪贴板，无需手动操作
-- ⚡ **快捷命令** - 预置常用 Linux 命令，一键发送到终端
+- ⚡ **快捷命令** - 预置 12 个常用 Linux 命令，一键发送到终端
 - 🔄 **自动重连** - 连接断开后按 R 键快速重连
 
 ## 🚀 一键部署
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/YOUR_USERNAME/workersssh)
+### 方式一：Deploy to Cloudflare 按钮
 
-### 前提条件
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/luckyf1oat/workersssh)
 
-1. 一个 [Cloudflare](https://dash.cloudflare.com) 账号
-2. [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/) 已安装
+点击上方按钮，Cloudflare 将自动：
+1. Fork 仓库到你的 GitHub
+2. 创建 KV Namespace 并自动绑定
+3. 部署 Worker
 
-### 手动部署步骤
+### 方式二：手动部署
 
 ```bash
 # 1. 克隆仓库
-git clone https://github.com/YOUR_USERNAME/workersssh.git
+git clone https://github.com/luckyf1oat/workersssh.git
 cd workersssh
 
 # 2. 安装依赖
 npm install
 
-# 3. 创建 KV Namespace
-npx wrangler kv:namespace create WORKERSSH_KV
+# 3. 一键部署（自动创建 KV + 部署 Worker）
+npm run deploy
+```
 
-# 4. 将输出的 KV ID 更新到 wrangler.toml
-# [[kv_namespaces]]
-# binding = "WORKERSSH_KV"
-# id = "your-kv-id-here"
+`npm run deploy` 脚本会自动完成：
+- ✅ 检查是否已存在 KV Namespace
+- ✅ 如不存在则自动创建 `workersssh-kv`
+- ✅ 自动更新 `wrangler.toml` 中的 KV ID
+- ✅ 部署 Worker 到 Cloudflare
 
-# 5. 本地开发测试
-npx wrangler dev --assets public
+### 本地开发测试
 
-# 6. 部署到 Cloudflare
-npx wrangler deploy --assets public
+```bash
+npm run dev
 ```
 
 ## 🛠️ 技术栈
@@ -54,11 +59,11 @@ npx wrangler deploy --assets public
 | 技术 | 用途 |
 |---|---|
 | **Cloudflare Workers** | 无服务器运行环境 |
-| **Cloudflare KV** | 数据持久化存储（密码、连接配置） |
+| **Cloudflare KV** | 数据持久化存储（密码、连接配置、IP 缓存） |
 | **Workers Socket API** | 原生 TCP 连接（`connect()`） |
 | **itty-router** | 轻量级路由 |
 | **xterm.js** | Web 终端模拟器 |
-| **Web Crypto API** | 密码哈希（PBKDF2） |
+| **Web Crypto API** | 密码哈希（PBKDF2 + SHA-256） |
 | **ip-api.com** | IP 地理定位 |
 | **WebSocket** | 实时双向通信 |
 
@@ -91,17 +96,34 @@ Worker 只做纯 TCP 代理，不处理 SSH 协议。**SSH 握手、加密、认
 ### 连接管理
 
 - **连接** - 点击 ▶️ 按钮或双击卡片打开终端
-- **改名** - 点击名称直接编辑
+- **改名** - 点击名称直接编辑（点击 → 输入新名称 → Enter）
 - **编辑** - 点击 ✏️ 按钮修改连接信息
 - **删除** - 点击 🗑️ 按钮确认删除
 
 ### 终端使用
 
 - **选中复制** - 鼠标选中任意文本自动复制
-- **快捷命令** - 点击底部命令按钮一键执行
+- **快捷命令** - 点击底部命令按钮一键执行（12 个预置命令）
 - **清屏** - 点击 🧹 按钮
 - **重连** - 按 `R` 键或点击 🔄 按钮
 - **返回** - 按 `ESC` 键或点击 ◀ 按钮
+
+### 预置快捷命令
+
+| 命令 | 用途 |
+|---|---|
+| `ls -la` | 列出文件详情 |
+| `df -h` | 磁盘使用情况 |
+| `free -m` | 内存使用 |
+| `top -bn1 \| head -20` | 进程排名 |
+| `ps aux --sort=-%mem \| head -10` | 按内存排序进程 |
+| `netstat -tlnp` | 监听端口 |
+| `whoami` | 当前用户 |
+| `uptime` | 运行时长 |
+| `uname -a` | 系统内核信息 |
+| `cat /etc/os-release` | 操作系统版本 |
+| `docker ps` | Docker 容器列表 |
+| `systemctl list-units...` | 运行中的服务 |
 
 ## 📁 项目结构
 
@@ -109,19 +131,21 @@ Worker 只做纯 TCP 代理，不处理 SSH 协议。**SSH 握手、加密、认
 workersssh/
 ├── public/                  # 前端静态资源
 │   ├── index.html           # SPA 入口
-│   ├── app.css              # 样式
+│   ├── app.css              # 暗黑主题样式
 │   ├── app.js               # 主入口
-│   ├── auth.js              # 认证页面
-│   ├── dashboard.js         # 连接管理
-│   ├── terminal.js          # 终端页面
+│   ├── auth.js              # 登录/设置页面
+│   ├── dashboard.js         # 连接管理 + 快捷命令
+│   ├── terminal.js          # xterm.js 终端
 │   └── utils.js             # 工具函数
 ├── src/                     # Worker 后端
-│   ├── index.ts             # 主入口 + 路由
-│   ├── auth.ts              # 认证 API
-│   ├── connections.ts       # 连接 CRUD API
+│   ├── index.ts             # 路由 + 静态资源
+│   ├── auth.ts              # 认证 (PBKDF2)
+│   ├── connections.ts       # 连接 CRUD
 │   ├── check.ts             # 状态检测 + IP 定位
-│   └── ws.ts                # WebSocket ↔ TCP 代理
-├── wrangler.toml            # Workers 配置
+│   └── ws.ts                # WebSocket ↔ TCP
+├── scripts/
+│   └── deploy.js            # 自动部署脚本
+├── wrangler.toml
 ├── package.json
 ├── tsconfig.json
 └── README.md

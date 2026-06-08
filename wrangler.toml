@@ -3,11 +3,12 @@ main = "src/index.ts"
 compatibility_date = "2025-02-04"
 compatibility_flags = ["nodejs_compat"]
 
+# KV Namespace - Auto-created by Deploy to Cloudflare button
+# If deploying manually, run `npm run deploy` to auto-create
+[[kv_namespaces]]
+binding = "WORKERSSH_KV"
+id = ""
+preview_id = ""
+
 [vars]
 ENVIRONMENT = "production"
-
-# KV Namespace - Uncomment and set ID after creating:
-# npx wrangler kv namespace create WORKERSSH_KV
-# [[kv_namespaces]]
-# binding = "WORKERSSH_KV"
-# id = "your-kv-id-here"
