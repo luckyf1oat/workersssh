@@ -1,12 +1,9 @@
 import { IRequest } from 'itty-router';
 
-// Use a simple hash approach compatible with Workers (bcryptjs is not available in Workers runtime)
-// We'll implement a PBKDF2-based password hashing using the Web Crypto API
 async function hashPassword(password: string, salt?: string): Promise<{ hash: string; salt: string }> {
 	const encoder = new TextEncoder();
 	const data = encoder.encode(password);
 	
-	// Generate a random salt if not provided
 	if (!salt) {
 		const saltBytes = crypto.getRandomValues(new Uint8Array(16));
 		salt = Array.from(saltBytes).map(b => b.toString(16).padStart(2, '0')).join('');
@@ -14,7 +11,6 @@ async function hashPassword(password: string, salt?: string): Promise<{ hash: st
 	
 	const saltData = encoder.encode(salt);
 	
-	// Use PBKDF2 via Web Crypto API
 	const key = await crypto.subtle.importKey(
 		'raw',
 		data,
@@ -46,13 +42,24 @@ async function verifyPassword(password: string, storedHash: string, salt: string
 }
 
 export async function handleAuth(request: IRequest, env: any, ctx: any): Promise<Response> {
-	const hasPassword = await env.WORKERSSH_KV.get('password_hash');
-	return new Response(JSON.stringify({ 
-		hasPassword: hasPassword !== null,
-		version: '1.0.0'
-	}), {
-		headers: { 'Content-Type': 'application/json' },
-	});
+	try {
+		const hasPassword = await env.WORKERSSH_KV.get('password_hash');
+		return new Response(JSON.stringify({ 
+			hasPassword: hasPassword !== null,
+			version: '1.0.0'
+		}), {
+			headers: { 'Content-Type': 'application/json' },
+		});
+	} catch (err: any) {
+		return new Response(JSON.stringify({ 
+			hasPassword: false,
+			error: err.message,
+			version: '1.0.0'
+		}), {
+			status: 200, // 仍然返回 200，前端只关心 hasPassword
+			headers: { 'Content-Type': 'application/json' },
+		});
+	}
 }
 
 export async function handleCheckPassword(request: IRequest, env: any, ctx: any): Promise<Response> {
@@ -83,7 +90,6 @@ export async function handleCheckPassword(request: IRequest, env: any, ctx: any)
 			});
 		}
 		
-		// Generate a simple session token (for this request only - stateless)
 		const tokenBytes = crypto.getRandomValues(new Uint8Array(32));
 		const token = Array.from(tokenBytes).map(b => b.toString(16).padStart(2, '0')).join('');
 		
